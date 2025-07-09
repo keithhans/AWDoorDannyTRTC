@@ -19,21 +19,14 @@ import com.nuwarobotics.service.agent.VoiceEventListener.ResultType
 import com.nuwarobotics.sdk.sample.tutorial.databinding.ActivityMainBinding
 
 import androidx.lifecycle.lifecycleScope
-import io.livekit.android.AudioOptions
-
-
-import io.livekit.android.LiveKit
-import io.livekit.android.LiveKitOverrides
-import io.livekit.android.events.RoomEvent
-import io.livekit.android.events.collect
-import io.livekit.android.room.Room
-import io.livekit.android.room.track.LocalVideoTrack
-import io.livekit.android.room.track.Track
-import io.livekit.android.room.track.VideoTrack
-import io.livekit.android.room.track.AudioTrack
-import io.livekit.android.room.track.LocalAudioTrack
-
 import kotlinx.coroutines.launch
+
+// TRTC SDK imports
+import com.tencent.trtc.TRTCCloud
+import com.tencent.trtc.TRTCCloudDef
+import com.tencent.trtc.TRTCCloudListener
+import com.tencent.rtmp.ui.TXCloudVideoView
+import android.os.Bundle as TRTCBundle
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
@@ -46,7 +39,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private lateinit var binding: ActivityMainBinding
-    lateinit var room: Room
+    private lateinit var mTRTCCloud: TRTCCloud
     private lateinit var mRobot: NuwaRobotAPI
     private lateinit var mToast: Toast
 
@@ -62,21 +55,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         // register Nuwa Robot Listener
         registerNuwaRobotListener()
+        
+        // register Voice Event Listener
+        setupVoiceEventListener()
 
-        // Create Room object.
-        room = LiveKit.create(applicationContext,
-            overrides = LiveKitOverrides(
-                audioOptions = AudioOptions(
-                    javaAudioDeviceModuleCustomizer = { builder ->
-                        builder.setUseStereoInput(true)
-                    }
-                )
-            )
-        )
-
-        // Setup the video renderer
-        room.initVideoRenderer(binding.renderer)
-        room.initVideoRenderer(binding.localCamera)
+        // 创建 TRTC 实例
+        mTRTCCloud = TRTCCloud.sharedInstance(applicationContext)
+        mTRTCCloud.addListener(mTRTCCloudListener)
 
         requestNeededPermissions { connectToRoom() }
 
@@ -200,7 +185,51 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 Log.d(TAG, "onMotorErrorEvent:$i")
             }
         })
+    }
 
+    // TRTC 事件监听器
+    private val mTRTCCloudListener = object : TRTCCloudListener() {
+        override fun onError(errCode: Int, errMsg: String?, extraInfo: TRTCBundle?) {
+            super.onError(errCode, errMsg, extraInfo)
+            val notification = "Error Code: $errCode, Error Message: $errMsg, extraInfo: $extraInfo"
+            showToast(notification)
+            Log.e(TAG, notification)
+        }
+
+        override fun onEnterRoom(result: Long) {
+            super.onEnterRoom(result)
+            if (result > 0) {
+                showToast("进房成功！")
+                Log.d(TAG, "进房成功，耗时: ${result}ms")
+                // 开启本地预览
+                startLocalPreview()
+            } else {
+                showToast("进房失败！")
+                Log.e(TAG, "进房失败，错误码: $result")
+            }
+        }
+
+        override fun onUserVideoAvailable(userId: String?, available: Boolean) {
+            super.onUserVideoAvailable(userId, available)
+            if (available) {
+                // 开始播放远端用户的视频流
+                mTRTCCloud.startRemoteView(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG, binding.renderer as TXCloudVideoView)
+                binding.progress.visibility = View.GONE
+                Log.d(TAG, "远端用户 $userId 开启了视频")
+            } else {
+                // 停止播放远端用户的视频流
+                mTRTCCloud.stopRemoteView(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG)
+                Log.d(TAG, "远端用户 $userId 关闭了视频")
+            }
+        }
+
+        override fun onUserAudioAvailable(userId: String?, available: Boolean) {
+            super.onUserAudioAvailable(userId, available)
+            Log.d(TAG, "远端用户 $userId 音频状态: $available")
+        }
+    }
+
+    private fun setupVoiceEventListener() {
         mRobot.registerVoiceEventListener(object : VoiceEventListener {
             override fun onWakeup(isError: Boolean, score: String, direction: Float) {
                 Log.d(TAG, "onWakeup:${!isError}, score:$score")
@@ -242,7 +271,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
             override fun onGrammarState(isError: Boolean, info: String) {
                 Log.d(TAG, "onGrammarState:${!isError}, info:$info")
-               
             }
 
             override fun onListenVolumeChanged(listenType: ListenType, volume: Int) {
@@ -255,130 +283,34 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun connectToRoom() {
-        val url = "wss://anywhere-door-uav9tfq2.livekit.cloud"
-        // val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTEzNTk1MDIsImlzcyI6IkFQSUVqaWV5d0NXdTVYRyIsIm5hbWUiOiJrZWl0aCIsIm5iZiI6MTc1MTI3MzEwMiwic3ViIjoia2VpdGgiLCJ2aWRlbyI6eyJyb29tIjoiYWxwaGEiLCJyb29tSm9pbiI6dHJ1ZX19.HptTr_1WYhqAcwUGwhbVcq1ZDaTwHunuyoACXGAWQXw"
-        val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTIwNDA0NTMsImlzcyI6IkFQSUVqaWV5d0NXdTVYRyIsIm5hbWUiOiJrZWl0aCIsIm5iZiI6MTc1MTQzNTY1Mywic3ViIjoia2VpdGgiLCJ2aWRlbyI6eyJyb29tIjoiYWxwaGEiLCJyb29tSm9pbiI6dHJ1ZX19.yu_6Iacfa4J-puQLMmnt1QqOqgnkLwOG7txxA8UDjHg"
-        Log.d(TAG, "connectToRoom: $url")
-
-        lifecycleScope.launch {
-            // Setup event handling.
-            launch {
-                room.events.collect { event ->
-                    when (event) {
-                        is RoomEvent.TrackSubscribed -> onTrackSubscribed(event)
-                        else -> {}
-                    }
-                }
-            }
-
-            // Connect to server.
-            try {
-                room.connect(
-                    url,
-                    token
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Error while connecting to server:", e)
-                return@launch
-            }
-
-            // Turn on audio/video recording.
-            val localParticipant = room.localParticipant
-            val micRet = localParticipant.setMicrophoneEnabled(true)
-            Log.d(TAG, "setMicrophoneEnabled result: $micRet")
-            val cameraRet = localParticipant.setCameraEnabled(true)
-            Log.d(TAG, "setCameraEnabled result: $cameraRet")
-
-            // Attach local video camera
-            val localTrack = localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
-            if (localTrack != null) {
-                attachLocalVideo(localTrack)
-            }
-
-            // Attach video of remote participant if already available.
-            val remoteVideoTrack = room.remoteParticipants.values.firstOrNull()
-                ?.getTrackPublication(Track.Source.CAMERA)
-                ?.track as? VideoTrack
-
-            if (remoteVideoTrack != null) {
-                attachVideo(remoteVideoTrack)
-            }
-
-            val audioTrack = localParticipant.getTrackPublication(Track.Source.MICROPHONE)?.track as? LocalAudioTrack
-            audioTrack?.setAudioBufferCallback(object : io.livekit.android.audio.AudioBufferCallback {
-                override fun onBuffer(
-                    buffer: java.nio.ByteBuffer,
-                    audioFormat: Int,
-                    channelCount: Int,
-                    sampleRate: Int,
-                    bytesRead: Int,
-                    captureTimeNs: Long
-                ): Long {
-                    val formatName = when (audioFormat) {
-                        android.media.AudioFormat.ENCODING_PCM_8BIT -> "PCM_8BIT"
-                        android.media.AudioFormat.ENCODING_PCM_16BIT -> "PCM_16BIT"
-                        android.media.AudioFormat.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
-                        else -> "UNKNOWN($audioFormat)"
-                    }
-                    Log.d(TAG, "AudioBuffer - Format: $formatName, Channels: $channelCount, SampleRate: $sampleRate Hz, BytesRead: $bytesRead, BufferSize: ${buffer.remaining()}, CaptureTime: ${captureTimeNs}ns")
-                    return captureTimeNs
-                }
-            })
-
-            // register rpc
-            localParticipant.registerRpcMethod(
-                "up"
-            ) { data ->
-                println("Received greeting from ${data.callerIdentity}: ${data.payload}")
-                mRobot.forwardInAccelerationEx()
-                "up, ${data.callerIdentity}!"
-            }
-
-            localParticipant.registerRpcMethod(
-                "down"
-            ) { data ->
-                println("Received greeting from ${data.callerIdentity}: ${data.payload}")
-                mRobot.backInAccelerationEx()
-                "down, ${data.callerIdentity}!"
-            }
-
-            localParticipant.registerRpcMethod(
-                "left"
-            ) { data ->
-                println("Received greeting from ${data.callerIdentity}: ${data.payload}")
-                mRobot.turnLeftEx()
-                "left, ${data.callerIdentity}!"
-            }
-
-            localParticipant.registerRpcMethod(
-                "right"
-            ) { data ->
-                println("Received greeting from ${data.callerIdentity}: ${data.payload}")
-                mRobot.turnRightEx()
-                "right, ${data.callerIdentity}!"
-            }
-
-        }
+        // TRTC 进房参数配置
+        val trtcParams = TRTCCloudDef.TRTCParams()
+        trtcParams.sdkAppId = 1600096066  // 请替换为您的 sdkAppId
+        trtcParams.userId = "keith"       // 用户ID
+        trtcParams.userSig = "eJyrVgrxCdYrSy1SslIy0jNQ0gHzM1NS80oy0zLBwtmpmSUZUInilOzEgoLMFCUrQzMDAwNLM0MTA4hMakVBZlEqUNzU1NQIKAURLcnMBYmZA4XMTCxMjKGmZKYDzfXNCy0OrfA0MSquCkp39ojRN82zcEt0Dw9IDLN0DfItM6osrwgOT88MTy0zsFWqBQBenDH8"        // 请替换为您的 UserSig
+        trtcParams.roomId = 12345        // 房间ID
+        
+        Log.d(TAG, "connectToRoom: roomId=${trtcParams.roomId}, userId=${trtcParams.userId}")
+        
+        // 进入房间
+        mTRTCCloud.enterRoom(trtcParams, TRTCCloudDef.TRTC_APP_SCENE_LIVE)
     }
 
-    private fun onTrackSubscribed(event: RoomEvent.TrackSubscribed) {
-        val track = event.track
-        if (track is VideoTrack) {
-            attachVideo(track)
-            Log.d(TAG, "onTrackSubscribed: VideoTrack")
-        }
-        if (track is AudioTrack) {
-            Log.d(TAG, "onTrackSubscribed: AudioTrack")
-        }
-    }
-
-    private fun attachVideo(videoTrack: VideoTrack) {
-        videoTrack.addRenderer(binding.renderer)
-        binding.progress.visibility = View.GONE
-    }
-
-    private fun attachLocalVideo(videoTrack: VideoTrack) {
-        videoTrack.addRenderer(binding.localCamera)
+    // 开启本地预览
+    private fun startLocalPreview() {
+        // 设置本地渲染参数
+        val renderParams = TRTCCloudDef.TRTCRenderParams()
+        renderParams.fillMode = TRTCCloudDef.TRTC_VIDEO_RENDER_MODE_FILL
+        renderParams.rotation = TRTCCloudDef.TRTC_VIDEO_ROTATION_0
+        
+        // 开启本地摄像头预览
+        mTRTCCloud.setLocalRenderParams(renderParams)
+        mTRTCCloud.startLocalPreview(true, binding.localCamera as TXCloudVideoView)
+        
+        // 开启本地音频采集
+        mTRTCCloud.startLocalAudio(TRTCCloudDef.TRTC_AUDIO_QUALITY_DEFAULT)
+        
+        Log.d(TAG, "本地预览已开启")
     }
 
     private fun requestNeededPermissions(onHasPermissions: () -> Unit) {
@@ -415,7 +347,16 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        room.disconnect()
+        // 停止本地预览
+        mTRTCCloud.stopLocalPreview()
+        // 停止本地音频
+        mTRTCCloud.stopLocalAudio()
+        // 退出房间
+        mTRTCCloud.exitRoom()
+        // 移除监听器
+        mTRTCCloud.removeListener(mTRTCCloudListener)
+        // 销毁 TRTC 实例
+        TRTCCloud.destroySharedInstance()
     }
 }
 

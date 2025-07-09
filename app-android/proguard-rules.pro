@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# TRTC SDK ProGuard rules
+-keep class com.tencent.** { *; }
+-dontwarn com.tencent.**
+-keep class tencent.** { *; }
+-dontwarn tencent.**

@@ -26,26 +26,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import io.livekit.android.LiveKit
-import io.livekit.android.events.RoomEvent
-import io.livekit.android.events.collect
-import io.livekit.android.renderer.SurfaceViewRenderer
-import io.livekit.android.renderer.TextureViewRenderer
-import io.livekit.android.room.Room
-import io.livekit.android.room.participant.LocalParticipant
-import io.livekit.android.room.participant.Participant.Identity
-import io.livekit.android.room.track.LocalVideoTrack
-import io.livekit.android.room.track.Track
-import io.livekit.android.room.track.VideoTrack
+import com.tencent.trtc.TRTCCloud
+import com.tencent.trtc.TRTCCloudDef
+import com.tencent.trtc.TRTCCloudListener
+import com.tencent.rtmp.ui.TXCloudVideoView
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.async
-import io.livekit.android.rpc.RpcError
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var room: Room
-    private lateinit var localParticipant: LocalParticipant
+    private lateinit var mTRTCCloud: TRTCCloud
     private var isMuted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,12 +44,9 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
-        // Create Room object.
-        room = LiveKit.create(applicationContext)
-
-        // Setup the video renderer
-        room.initVideoRenderer(findViewById<SurfaceViewRenderer>(R.id.renderer))
-        room.initVideoRenderer(findViewById<TextureViewRenderer>(R.id.local_camera))
+        // Initialize TRTC SDK
+        mTRTCCloud = TRTCCloud.sharedInstance(applicationContext)
+        mTRTCCloud.setListener(mTRTCCloudListener)
 
         // Setup direction control buttons
         setupDirectionButtons()
@@ -66,67 +54,63 @@ class MainActivity : AppCompatActivity() {
         requestNeededPermissions { connectToRoom() }
     }
 
+    private val mTRTCCloudListener = object : TRTCCloudListener() {
+        override fun onError(errCode: Int, errMsg: String?, extraInfo: Bundle?) {
+            Log.e("MainActivity", "TRTC Error: $errCode, $errMsg")
+        }
+
+        override fun onEnterRoom(result: Long) {
+            if (result > 0) {
+                Log.d("MainActivity", "Enter room success")
+                startLocalPreview()
+            } else {
+                Log.e("MainActivity", "Enter room failed: $result")
+            }
+        }
+
+        override fun onExitRoom(reason: Int) {
+            Log.d("MainActivity", "Exit room: $reason")
+        }
+
+        override fun onRemoteUserEnterRoom(userId: String?) {
+            Log.d("MainActivity", "Remote user enter: $userId")
+        }
+
+        override fun onRemoteUserLeaveRoom(userId: String?, reason: Int) {
+            Log.d("MainActivity", "Remote user leave: $userId")
+        }
+
+        override fun onUserVideoAvailable(userId: String?, available: Boolean) {
+            if (available) {
+                val remoteView = findViewById<TXCloudVideoView>(R.id.renderer)
+                mTRTCCloud.startRemoteView(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG, remoteView)
+                findViewById<View>(R.id.progress).visibility = View.GONE
+            } else {
+                mTRTCCloud.stopRemoteView(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG)
+            }
+        }
+
+        override fun onUserAudioAvailable(userId: String?, available: Boolean) {
+            Log.d("MainActivity", "User audio available: $userId, $available")
+        }
+    }
+
     private fun connectToRoom() {
-        val url = "wss://anywhere-door-uav9tfq2.livekit.cloud"
-        val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTgwOTA0NzcsImlzcyI6IkFQSUVqaWV5d0NXdTVYRyIsIm5hbWUiOiJwaWthYmVhciIsIm5iZiI6MTc1MjA0MjQ3Nywic3ViIjoicGlrYWJlYXIiLCJ2aWRlbyI6eyJyb29tIjoiYWxwaGEiLCJyb29tSm9pbiI6dHJ1ZX19.cQ7XAJfaj0lt4oPTZ_4CH0kIDj-nbxoAkOoxDDwruOs"
-        lifecycleScope.launch {
-            // Setup event handling.
-            launch {
-                room.events.collect { event ->
-                    when (event) {
-                        is RoomEvent.TrackSubscribed -> onTrackSubscribed(event)
-                        else -> {}
-                    }
-                }
-            }
+        // TRTC 参数配置
+        val params = TRTCCloudDef.TRTCParams()
+        params.sdkAppId = 1600096066 // 请替换为您的SDKAppID
+        params.userId = "pikabear" // 用户ID
+        params.userSig = "eJwtzE0LgkAUheH-MttCrqbjKLgoahG4CDRoO3Jn5GbKNJoZ0X-Pr*V5XjhflqeZ0yvLYuY5wLbzJlRNR5pmNlTJQkm7thYraQwhi10OABF3fViKGgxZNXoQBN6YFu2oniwcifsictcXKqfrR5pnsj3uDqJ4*7UenvcNNq9yf76d8DLYQuAHQo3QXxP2*wP79TNG" // 请替换为您的UserSig
+        params.roomId = 12345 // 房间号
 
-            // Connect to server.
-            try {
-                room.connect(
-                    url,
-                    token,
-                )
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error while connecting to server:", e)
-                return@launch
-            }
-
-            // Turn on audio/video recording.
-            localParticipant = room.localParticipant
-            localParticipant.setMicrophoneEnabled(true)
-            localParticipant.setCameraEnabled(true)
-
-            // Attach local video camera
-            val localTrack = localParticipant.getTrackPublication(Track.Source.CAMERA)?.track as? LocalVideoTrack
-            if (localTrack != null) {
-                attachLocalVideo(localTrack)
-            }
-
-            // Attach video of remote participant if already available.
-            val remoteVideoTrack = room.remoteParticipants.values.firstOrNull()
-                ?.getTrackPublication(Track.Source.CAMERA)
-                ?.track as? VideoTrack
-
-            if (remoteVideoTrack != null) {
-                attachVideo(remoteVideoTrack)
-            }
-        }
+        // 进入房间
+        mTRTCCloud.enterRoom(params, TRTCCloudDef.TRTC_APP_SCENE_VIDEOCALL)
     }
 
-    private fun onTrackSubscribed(event: RoomEvent.TrackSubscribed) {
-        val track = event.track
-        if (track is VideoTrack) {
-            attachVideo(track)
-        }
-    }
-
-    private fun attachVideo(videoTrack: VideoTrack) {
-        videoTrack.addRenderer(findViewById<SurfaceViewRenderer>(R.id.renderer))
-        findViewById<View>(R.id.progress).visibility = View.GONE
-    }
-
-    private fun attachLocalVideo(videoTrack: VideoTrack) {
-        videoTrack.addRenderer(findViewById<SurfaceViewRenderer>(R.id.local_camera))
+    private fun startLocalPreview() {
+        val localView = findViewById<TXCloudVideoView>(R.id.local_camera)
+        mTRTCCloud.startLocalPreview(true, localView)
+        mTRTCCloud.startLocalAudio(TRTCCloudDef.TRTC_AUDIO_QUALITY_DEFAULT)
     }
 
     private fun requestNeededPermissions(onHasPermissions: () -> Unit) {
@@ -169,82 +153,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun up() {
-        lifecycleScope.launch {
-            try {
-                val response = coroutineScope {
-                    async {
-                        localParticipant.performRpc(
-                            destinationIdentity = Identity("keith"),
-                            method = "up",
-                            payload = ""
-                        )
-                    }
-                }.await()
-                println("RPC response: $response")
-            } catch (e: RpcError) {
-                println("RPC call failed: $e")
-            }
-        }
+        // TODO: 实现向上移动的逻辑，可以通过自定义消息或其他方式实现
         Toast.makeText(this, "向上移动", Toast.LENGTH_SHORT).show()
     }
 
     private fun down() {
-        lifecycleScope.launch {
-            try {
-                val response = coroutineScope {
-                    async {
-                        localParticipant.performRpc(
-                            destinationIdentity = Identity("keith"),
-                            method = "down",
-                            payload = ""
-                        )
-                    }
-                }.await()
-                println("RPC response: $response")
-            } catch (e: RpcError) {
-                println("RPC call failed: $e")
-            }
-        }
+        // TODO: 实现向下移动的逻辑，可以通过自定义消息或其他方式实现
         Toast.makeText(this, "向下移动", Toast.LENGTH_SHORT).show()
     }
 
     private fun left() {
-        lifecycleScope.launch {
-            try {
-                val response = coroutineScope {
-                    async {
-                        localParticipant.performRpc(
-                            destinationIdentity = Identity("keith"),
-                            method = "left",
-                            payload = ""
-                        )
-                    }
-                }.await()
-                println("RPC response: $response")
-            } catch (e: RpcError) {
-                println("RPC call failed: $e")
-            }
-        }
+        // TODO: 实现向左移动的逻辑，可以通过自定义消息或其他方式实现
         Toast.makeText(this, "向左移动", Toast.LENGTH_SHORT).show()
     }
 
     private fun right() {
-        lifecycleScope.launch {
-            try {
-                val response = coroutineScope {
-                    async {
-                        localParticipant.performRpc(
-                            destinationIdentity = Identity("keith"),
-                            method = "right",
-                            payload = ""
-                        )
-                    }
-                }.await()
-                println("RPC response: $response")
-            } catch (e: RpcError) {
-                println("RPC call failed: $e")
-            }
-        }
+        // TODO: 实现向右移动的逻辑，可以通过自定义消息或其他方式实现
         Toast.makeText(this, "向右移动", Toast.LENGTH_SHORT).show()
     }
 
@@ -254,11 +178,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleMute() {
-        if (::localParticipant.isInitialized) {
+        if (::mTRTCCloud.isInitialized) {
             isMuted = !isMuted
             
-            lifecycleScope.launch {
-                localParticipant.setMicrophoneEnabled(!isMuted)
+            if (isMuted) {
+                mTRTCCloud.muteLocalAudio(true)
+            } else {
+                mTRTCCloud.muteLocalAudio(false)
             }
             
             val muteButton = findViewById<android.widget.Button>(R.id.btn_mute)
@@ -274,6 +200,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        room.disconnect()
+        if (::mTRTCCloud.isInitialized) {
+            mTRTCCloud.stopLocalPreview()
+            mTRTCCloud.stopLocalAudio()
+            mTRTCCloud.exitRoom()
+            mTRTCCloud.setListener(null)
+            TRTCCloud.destroySharedInstance()
+        }
     }
 }

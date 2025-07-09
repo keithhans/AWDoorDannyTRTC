@@ -15,3 +15,6 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# TRTC SDK ProGuard rules
+-keep class com.tencent.** { *; }
