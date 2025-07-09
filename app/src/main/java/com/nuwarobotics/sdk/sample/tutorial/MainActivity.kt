@@ -32,6 +32,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     companion object {
         private const val TAG = "anywhere_door"
+        
+        // 自定义消息命令ID定义（与app-android模块保持一致）
+        private const val CMD_ID_DIRECTION = 1  // 方向控制命令
+        private const val CMD_ID_STOP = 2       // 停止命令
+        
+        // 方向命令
+        private const val DIRECTION_UP = "UP"
+        private const val DIRECTION_DOWN = "DOWN"
+        private const val DIRECTION_LEFT = "LEFT"
+        private const val DIRECTION_RIGHT = "RIGHT"
+        private const val DIRECTION_STOP = "STOP"
     }
 
     override fun onClick(v: View) {
@@ -227,6 +238,28 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             super.onUserAudioAvailable(userId, available)
             Log.d(TAG, "远端用户 $userId 音频状态: $available")
         }
+        
+        override fun onRecvCustomCmdMsg(userId: String?, cmdId: Int, seq: Int, message: ByteArray?) {
+            super.onRecvCustomCmdMsg(userId, cmdId, seq, message)
+            Log.d(TAG, "收到来自 $userId 的自定义消息, cmdId: $cmdId")
+            
+            message?.let {
+                val messageStr = String(it, Charsets.UTF_8)
+                Log.d(TAG, "消息内容: $messageStr")
+                
+                when (cmdId) {
+                    CMD_ID_DIRECTION -> {
+                        handleDirectionCommand(messageStr)
+                    }
+                    CMD_ID_STOP -> {
+                        handleStopCommand()
+                    }
+                    else -> {
+                        Log.w(TAG, "未知的命令ID: $cmdId")
+                    }
+                }
+            }
+        }
     }
 
     private fun setupVoiceEventListener() {
@@ -311,6 +344,60 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         mTRTCCloud.startLocalAudio(TRTCCloudDef.TRTC_AUDIO_QUALITY_DEFAULT)
         
         Log.d(TAG, "本地预览已开启")
+    }
+    
+    /**
+     * 处理方向控制命令
+     * @param direction 方向指令
+     */
+    private fun handleDirectionCommand(direction: String) {
+        runOnUiThread {
+            when (direction) {
+                DIRECTION_UP -> {
+                    showToast("执行向前移动")
+                    Log.d(TAG, "执行向前移动指令")
+                    // 使用Nuwa机器人SDK控制机器人向前移动
+                    mRobot.move(0.2f)
+                }
+                DIRECTION_DOWN -> {
+                    showToast("执行向后移动")
+                    Log.d(TAG, "执行向后移动指令")
+                    // 使用Nuwa机器人SDK控制机器人向后移动
+                    mRobot.move(-0.2f)
+                }
+                DIRECTION_LEFT -> {
+                    showToast("执行向左转")
+                    Log.d(TAG, "执行向左转指令")
+                    // 使用Nuwa机器人SDK控制机器人向左转
+                    mRobot.turn(30f)
+                }
+                DIRECTION_RIGHT -> {
+                    showToast("执行向右转")
+                    Log.d(TAG, "执行向右转指令")
+                    // 使用Nuwa机器人SDK控制机器人向右转
+                    mRobot.turn(-30f)
+                }
+                else -> {
+                    Log.w(TAG, "未知的方向指令: $direction")
+                    showToast("未知的方向指令: $direction")
+                }
+            }
+        }
+    }
+    
+    /**
+     * 处理停止命令
+     */
+    private fun handleStopCommand() {
+        runOnUiThread {
+            showToast("执行停止移动")
+            Log.d(TAG, "执行停止移动指令")
+            // 使用Nuwa机器人SDK停止机器人运动
+            mRobot.move(0f)
+            mRobot.turn(0f)
+            // 重置机器人姿态
+            mRobot.motionReset()
+        }
     }
 
     private fun requestNeededPermissions(onHasPermissions: () -> Unit) {

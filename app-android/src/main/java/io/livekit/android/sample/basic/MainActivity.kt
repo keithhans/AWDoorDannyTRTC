@@ -21,6 +21,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -38,6 +39,19 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mTRTCCloud: TRTCCloud
     private var isMuted = false
+    
+    // 自定义消息命令ID定义
+    companion object {
+        private const val CMD_ID_DIRECTION = 1  // 方向控制命令
+        private const val CMD_ID_STOP = 2       // 停止命令
+        
+        // 方向命令
+        private const val DIRECTION_UP = "UP"
+        private const val DIRECTION_DOWN = "DOWN"
+        private const val DIRECTION_LEFT = "LEFT"
+        private const val DIRECTION_RIGHT = "RIGHT"
+        private const val DIRECTION_STOP = "STOP"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         override fun onUserAudioAvailable(userId: String?, available: Boolean) {
             Log.d("MainActivity", "User audio available: $userId, $available")
         }
+        
     }
 
     private fun connectToRoom() {
@@ -112,6 +127,28 @@ class MainActivity : AppCompatActivity() {
         mTRTCCloud.startLocalPreview(true, localView)
         mTRTCCloud.startLocalAudio(TRTCCloudDef.TRTC_AUDIO_QUALITY_DEFAULT)
     }
+    
+    /**
+     * 发送自定义消息
+     * @param cmdId 命令ID
+     * @param message 消息内容
+     */
+    private fun sendCustomMessage(cmdId: Int, message: String) {
+        if (::mTRTCCloud.isInitialized) {
+            try {
+                val data = message.toByteArray(Charsets.UTF_8)
+                mTRTCCloud.sendCustomCmdMsg(cmdId, data, true, true)
+                Log.d("MainActivity", "Sent custom message: cmdId=$cmdId, message=$message")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Failed to send custom message", e)
+                Toast.makeText(this, "发送消息失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "请先连接到房间", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+   
 
     private fun requestNeededPermissions(onHasPermissions: () -> Unit) {
         val requestPermissionLauncher =
@@ -144,37 +181,91 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupDirectionButtons() {
-        findViewById<View>(R.id.btn_up).setOnClickListener { up() }
-        findViewById<View>(R.id.btn_down).setOnClickListener { down() }
-        findViewById<View>(R.id.btn_left).setOnClickListener { left() }
-        findViewById<View>(R.id.btn_right).setOnClickListener { right() }
+        // 设置方向按钮的触摸监听器，按下时执行动作，释放时停止
+        findViewById<View>(R.id.btn_up).setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    up()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stop()
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        findViewById<View>(R.id.btn_down).setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    down()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stop()
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        findViewById<View>(R.id.btn_left).setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    left()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stop()
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        findViewById<View>(R.id.btn_right).setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    right()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stop()
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        // 停止按钮和静音按钮保持原有的点击监听器
         findViewById<View>(R.id.btn_stop).setOnClickListener { stop() }
         findViewById<View>(R.id.btn_mute).setOnClickListener { toggleMute() }
     }
 
     private fun up() {
-        // TODO: 实现向上移动的逻辑，可以通过自定义消息或其他方式实现
-        Toast.makeText(this, "向上移动", Toast.LENGTH_SHORT).show()
+        sendCustomMessage(CMD_ID_DIRECTION, DIRECTION_UP)
+        Toast.makeText(this, "发送向上移动指令", Toast.LENGTH_SHORT).show()
     }
 
     private fun down() {
-        // TODO: 实现向下移动的逻辑，可以通过自定义消息或其他方式实现
-        Toast.makeText(this, "向下移动", Toast.LENGTH_SHORT).show()
+        sendCustomMessage(CMD_ID_DIRECTION, DIRECTION_DOWN)
+        Toast.makeText(this, "发送向下移动指令", Toast.LENGTH_SHORT).show()
     }
 
     private fun left() {
-        // TODO: 实现向左移动的逻辑，可以通过自定义消息或其他方式实现
-        Toast.makeText(this, "向左移动", Toast.LENGTH_SHORT).show()
+        sendCustomMessage(CMD_ID_DIRECTION, DIRECTION_LEFT)
+        Toast.makeText(this, "发送向左移动指令", Toast.LENGTH_SHORT).show()
     }
 
     private fun right() {
-        // TODO: 实现向右移动的逻辑，可以通过自定义消息或其他方式实现
-        Toast.makeText(this, "向右移动", Toast.LENGTH_SHORT).show()
+        sendCustomMessage(CMD_ID_DIRECTION, DIRECTION_RIGHT)
+        Toast.makeText(this, "发送向右移动指令", Toast.LENGTH_SHORT).show()
     }
 
     private fun stop() {
-        Toast.makeText(this, "停止移动", Toast.LENGTH_SHORT).show()
-        // TODO: 实现停止移动的逻辑
+        sendCustomMessage(CMD_ID_STOP, DIRECTION_STOP)
+        Toast.makeText(this, "发送停止移动指令", Toast.LENGTH_SHORT).show()
     }
 
     private fun toggleMute() {
