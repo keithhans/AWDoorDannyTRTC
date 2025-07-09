@@ -24,65 +24,167 @@
         android:layout_gravity="center" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
+        android:layout_gravity="bottom"
         android:layout_marginBottom="20dp"
-        android:orientation="vertical">
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btn_up"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:background="#80808080"
-            android:text="上" />
+        <!-- 自适应布局：左右分布控制按钮 -->
 
+        <!-- 左侧：移动控制按钮 -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <Button
-                android:id="@+id/btn_left"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
-                android:background="#80808080"
-                android:text="左" />
+                android:text="移动控制"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="8dp" />
 
             <Button
-                android:id="@+id/btn_stop"
+                android:id="@+id/btn_up"
+                android:layout_width="60dp"
+                android:layout_height="45dp"
+                android:layout_gravity="center_horizontal"
+                android:background="#80808080"
+                android:text="上"
+                android:textSize="12sp"
+                android:layout_marginBottom="5dp" />
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
-                android:background="#80808080"
-                android:text="停" />
+                android:layout_gravity="center_horizontal"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_left"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="#80808080"
+                    android:text="左"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_stop"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="#80808080"
+                    android:text="停"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_right"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:background="#80808080"
+                    android:text="右"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <Button
-                android:id="@+id/btn_right"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:id="@+id/btn_down"
+                android:layout_width="60dp"
+                android:layout_height="45dp"
+                android:layout_gravity="center_horizontal"
                 android:background="#80808080"
-                android:text="右" />
+                android:text="下"
+                android:textSize="12sp"
+                android:layout_marginTop="5dp" />
+
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btn_down"
-            android:layout_width="wrap_content"
+        <!-- 右侧：脖子控制按钮 -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:background="#80808080"
-            android:text="下" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btn_mute"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="10dp"
-            android:background="#80808080"
-            android:text="静音" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="脖子控制"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btn_neck_up"
+                android:layout_width="60dp"
+                android:layout_height="45dp"
+                android:layout_gravity="center_horizontal"
+                android:background="#80808080"
+                android:text="仰"
+                android:textSize="12sp"
+                android:layout_marginBottom="5dp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_neck_left"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="#80808080"
+                    android:text="左"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_neck_reset"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="#80808080"
+                    android:text="中"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_neck_right"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:background="#80808080"
+                    android:text="右"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_neck_down"
+                android:layout_width="60dp"
+                android:layout_height="45dp"
+                android:layout_gravity="center_horizontal"
+                android:background="#80808080"
+                android:text="俯"
+                android:textSize="12sp"
+                android:layout_marginTop="5dp" />
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- 静音按钮 -->
+    <Button
+        android:id="@+id/btn_mute"
+        android:layout_width="80dp"
+        android:layout_height="45dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="160dp"
+        android:background="#80808080"
+        android:text="静音"
+        android:textSize="12sp" />
 
 </FrameLayout>

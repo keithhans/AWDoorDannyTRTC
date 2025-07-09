@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         // 自定义消息命令ID定义（与app-android模块保持一致）
         private const val CMD_ID_DIRECTION = 1  // 方向控制命令
         private const val CMD_ID_STOP = 2       // 停止命令
+        private const val CMD_ID_NECK = 3       // 脖子控制命令
         
         // 方向命令
         private const val DIRECTION_UP = "UP"
@@ -43,6 +44,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         private const val DIRECTION_LEFT = "LEFT"
         private const val DIRECTION_RIGHT = "RIGHT"
         private const val DIRECTION_STOP = "STOP"
+        
+        // 脖子控制命令
+        private const val NECK_UP = "NECK_UP"
+        private const val NECK_DOWN = "NECK_DOWN"
+        private const val NECK_LEFT = "NECK_LEFT"
+        private const val NECK_RIGHT = "NECK_RIGHT"
+        private const val NECK_RESET = "NECK_RESET"
     }
 
     override fun onClick(v: View) {
@@ -53,6 +61,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private lateinit var mTRTCCloud: TRTCCloud
     private lateinit var mRobot: NuwaRobotAPI
     private lateinit var mToast: Toast
+
+    // 脖子角度控制变量
+    private var neckVerticalAngle: Float = 0f // 脖子上下角度，范围-20到20
+    private var neckHorizontalAngle: Float = 0f // 脖子左右角度，范围-30到30
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +81,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         
         // register Voice Event Listener
         setupVoiceEventListener()
+
+        // 初始化脖子角度变量
+        neckVerticalAngle = 0f
+        neckHorizontalAngle = 0f
 
         // 创建 TRTC 实例
         mTRTCCloud = TRTCCloud.sharedInstance(applicationContext)
@@ -254,6 +270,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     CMD_ID_STOP -> {
                         handleStopCommand()
                     }
+                    CMD_ID_NECK -> {
+                        handleNeckCommand(messageStr)
+                    }
                     else -> {
                         Log.w(TAG, "未知的命令ID: $cmdId")
                     }
@@ -397,6 +416,60 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             mRobot.turn(0f)
             // 重置机器人姿态
             mRobot.motionReset()
+        }
+    }
+    
+    /**
+     * 处理脖子控制命令
+     * @param neckCommand 脖子控制指令
+     */
+    private fun handleNeckCommand(neckCommand: String) {
+        runOnUiThread {
+            when (neckCommand) {
+                NECK_UP -> {
+                    showToast("执行抬头")
+                    Log.d(TAG, "执行抬头指令")
+                    // 使用Nuwa机器人SDK控制机器人抬头
+                    neckVerticalAngle = (neckVerticalAngle - 2f).coerceAtLeast(-20f)
+                    mRobot.ctlMotor(1, 0, neckVerticalAngle, 30f)
+                }
+                NECK_DOWN -> {
+                    showToast("执行低头")
+                    Log.d(TAG, "执行低头指令")
+                    // 使用Nuwa机器人SDK控制机器人低头
+                    neckVerticalAngle = (neckVerticalAngle + 2f).coerceAtMost(20f)
+                    mRobot.ctlMotor(1, 0, neckVerticalAngle, 30f)
+                }
+                NECK_LEFT -> {
+                    showToast("执行左转头")
+                    Log.d(TAG, "执行左转头指令")
+                    // 使用Nuwa机器人SDK控制机器人左转头
+                    neckHorizontalAngle = (neckHorizontalAngle + 2f).coerceAtMost(40f)
+                    mRobot.ctlMotor(2, 0, neckHorizontalAngle, 30f)
+                }
+                NECK_RIGHT -> {
+                    showToast("执行右转头")
+                    Log.d(TAG, "执行右转头指令")
+                    // 使用Nuwa机器人SDK控制机器人右转头
+                    neckHorizontalAngle = (neckHorizontalAngle - 2f).coerceAtLeast(-40f)
+                    mRobot.ctlMotor(2, 0, neckHorizontalAngle, 30f)
+                }
+                NECK_RESET -> {
+                    showToast("执行脖子复位")
+                    Log.d(TAG, "执行脖子复位指令")
+                    // 重置脖子角度为0
+                    neckVerticalAngle = 0f
+                    neckHorizontalAngle = 0f
+                    // 停止脖子电机并重置位置
+                    mRobot.ctlMotor(1, 0, 0f, 30f) // 重置上下运动
+                    mRobot.ctlMotor(2, 0, 0f, 30f) // 重置左右运动
+
+                }
+                else -> {
+                    Log.w(TAG, "未知的脖子控制指令: $neckCommand")
+                    showToast("未知的脖子控制指令: $neckCommand")
+                }
+            }
         }
     }
 

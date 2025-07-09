@@ -18,6 +18,7 @@ package io.livekit.android.sample.basic
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val CMD_ID_DIRECTION = 1  // 方向控制命令
         private const val CMD_ID_STOP = 2       // 停止命令
+        private const val CMD_ID_NECK = 3       // 脖子控制命令
         
         // 方向命令
         private const val DIRECTION_UP = "UP"
@@ -51,6 +53,13 @@ class MainActivity : AppCompatActivity() {
         private const val DIRECTION_LEFT = "LEFT"
         private const val DIRECTION_RIGHT = "RIGHT"
         private const val DIRECTION_STOP = "STOP"
+        
+        // 脖子控制命令
+        private const val NECK_UP = "NECK_UP"
+        private const val NECK_DOWN = "NECK_DOWN"
+        private const val NECK_LEFT = "NECK_LEFT"
+        private const val NECK_RIGHT = "NECK_RIGHT"
+        private const val NECK_RESET = "NECK_RESET"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -241,6 +250,16 @@ class MainActivity : AppCompatActivity() {
         // 停止按钮和静音按钮保持原有的点击监听器
         findViewById<View>(R.id.btn_stop).setOnClickListener { stop() }
         findViewById<View>(R.id.btn_mute).setOnClickListener { toggleMute() }
+        
+        // 设置脖子控制按钮的触摸监听器
+        findViewById<View>(R.id.btn_neck_up).setOnClickListener { neckUp() }
+        
+        findViewById<View>(R.id.btn_neck_down).setOnClickListener { neckDown() }
+        findViewById<View>(R.id.btn_neck_left).setOnClickListener { neckLeft() }
+        findViewById<View>(R.id.btn_neck_right).setOnClickListener { neckRight() }
+       
+        // 脖子复位按钮使用点击监听器
+        findViewById<View>(R.id.btn_neck_reset).setOnClickListener { neckReset() }
     }
 
     private fun up() {
@@ -267,7 +286,33 @@ class MainActivity : AppCompatActivity() {
         sendCustomMessage(CMD_ID_STOP, DIRECTION_STOP)
         Toast.makeText(this, "发送停止移动指令", Toast.LENGTH_SHORT).show()
     }
-
+    
+    // 脖子控制方法
+    private fun neckUp() {
+        sendCustomMessage(CMD_ID_NECK, NECK_UP)
+        Toast.makeText(this, "发送抬头指令", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun neckDown() {
+        sendCustomMessage(CMD_ID_NECK, NECK_DOWN)
+        Toast.makeText(this, "发送低头指令", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun neckLeft() {
+        sendCustomMessage(CMD_ID_NECK, NECK_LEFT)
+        Toast.makeText(this, "发送脖子左转指令", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun neckRight() {
+        sendCustomMessage(CMD_ID_NECK, NECK_RIGHT)
+        Toast.makeText(this, "发送脖子右转指令", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun neckReset() {
+        sendCustomMessage(CMD_ID_NECK, NECK_RESET)
+        Toast.makeText(this, "发送脖子复位指令", Toast.LENGTH_SHORT).show()
+    }
+    
     private fun toggleMute() {
         if (::mTRTCCloud.isInitialized) {
             isMuted = !isMuted
@@ -287,6 +332,25 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "请先连接到房间", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        
+        // 处理屏幕方向变化
+        when (newConfig.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                Log.d("MainActivity", "切换到横屏模式")
+                Toast.makeText(this, "横屏模式", Toast.LENGTH_SHORT).show()
+            }
+            Configuration.ORIENTATION_PORTRAIT -> {
+                Log.d("MainActivity", "切换到竖屏模式")
+                Toast.makeText(this, "竖屏模式", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        // 重新设置按钮监听器，确保在布局变化后按钮功能正常
+        setupDirectionButtons()
     }
 
     override fun onDestroy() {
