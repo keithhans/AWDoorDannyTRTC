@@ -285,7 +285,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun connectToRoom() {
         // TRTC 进房参数配置
         val trtcParams = TRTCCloudDef.TRTCParams()
-        trtcParams.sdkAppId = 1600096066  // 请替换为您的 sdkAppId
+        trtcParams.sdkAppId = 1600096140  // 请替换为您的 sdkAppId
         trtcParams.userId = "keith"       // 用户ID
         trtcParams.userSig = "eJyrVgrxCdYrSy1SslIy0jNQ0gHzM1NS80oy0zLBwtmpmSUZUInilOzEgoLMFCUrQzMDAwNLM0MTA4hMakVBZlEqUNzU1NQIKAURLcnMBYmZA4XMTCxMjKGmZKYDzfXNCy0OrfA0MSquCkp39ojRN82zcEt0Dw9IDLN0DfItM6osrwgOT88MTy0zsFWqBQBenDH8"        // 请替换为您的 UserSig
         trtcParams.roomId = 12345        // 房间ID

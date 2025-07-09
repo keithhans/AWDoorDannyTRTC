@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity() {
     private fun connectToRoom() {
         // TRTC 参数配置
         val params = TRTCCloudDef.TRTCParams()
-        params.sdkAppId = 1600096066 // 请替换为您的SDKAppID
+        params.sdkAppId = 1600096140 // 请替换为您的SDKAppID
         params.userId = "pikabear" // 用户ID
         params.userSig = "eJwtzE0LgkAUheH-MttCrqbjKLgoahG4CDRoO3Jn5GbKNJoZ0X-Pr*V5XjhflqeZ0yvLYuY5wLbzJlRNR5pmNlTJQkm7thYraQwhi10OABF3fViKGgxZNXoQBN6YFu2oniwcifsictcXKqfrR5pnsj3uDqJ4*7UenvcNNq9yf76d8DLYQuAHQo3QXxP2*wP79TNG" // 请替换为您的UserSig
         params.roomId = 12345 // 房间号
