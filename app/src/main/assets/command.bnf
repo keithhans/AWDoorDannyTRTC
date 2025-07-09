@@ -1,0 +1,35 @@
+#BNF+IAT 1.0 UTF-8;
+!grammar test;
+!slot <cmda>;
+!slot <cmdb>;
+!slot <cmdc>;
+!slot <cmdd>;
+!slot <cmdf>;
+!slot <cmdg>;
+!slot <cmdh>;
+!slot <cmdi>;
+!slot <cmdj>;
+!slot <cmdk>;
+!slot <cmdl>;
+!slot <cmdm>;
+!slot <cmdn>;
+!slot <cmdo>;
+!start <callstart>;
+<callstart>:<cmda>|<cmdb>|<cmdc>|<cmdd>|<cmde>|<cmdf>|<cmdg>|<cmdh>|<cmdi>|<cmdj>|<cmdk>|<cmdl>|<cmdm>|<cmdn>|<cmdo>;
+
+<cmda>:看着我;
+<cmdb>:跳一支舞;
+<cmdc>:握手;
+<cmdd>:拍照;
+<cmde>:超可爱|超棒|超行|超厉害|超聪明|超靠谱|我爱妳;
+<cmdf>:超笨|笨笨|不乖;
+<cmdg>:早安|早上好|午安|晚安|晚上好|你好;
+<cmdh>:我在这里|这里;
+<cmdi>:跟著我;
+<cmdj>:別過來;
+<cmdk>:我想聽故事|我想聽音樂|我想聽歌;
+<cmdl>:你是誰;
+<cmdm>:你的名字;
+<cmdn>:你幾歲;
+<cmdo>:你很強嗎;
+
