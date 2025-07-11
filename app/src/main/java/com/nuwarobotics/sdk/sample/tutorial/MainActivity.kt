@@ -335,6 +335,14 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun connectToRoom() {
+        val netQoSParams = TRTCCloudDef.TRTCNetworkQosParam()
+        netQoSParams.preference = TRTCCloudDef.TRTC_VIDEO_QOS_PREFERENCE_SMOOTH
+        mTRTCCloud.setNetworkQosParam(netQoSParams)
+
+        val videoEncParams = TRTCCloudDef.TRTCVideoEncParam()
+        videoEncParams.enableAdjustRes = true
+        mTRTCCloud.setVideoEncoderParam(videoEncParams)
+
         // TRTC 进房参数配置
         val trtcParams = TRTCCloudDef.TRTCParams()
         trtcParams.sdkAppId = 1600096140  // 请替换为您的 sdkAppId

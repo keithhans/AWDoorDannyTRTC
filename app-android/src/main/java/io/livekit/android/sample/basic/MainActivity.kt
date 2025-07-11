@@ -106,6 +106,9 @@ class MainActivity : AppCompatActivity() {
         override fun onUserVideoAvailable(userId: String?, available: Boolean) {
             if (available) {
                 val remoteView = findViewById<TXCloudVideoView>(R.id.renderer)
+                val params = TRTCCloudDef.TRTCRenderParams()
+                params.mirrorType = TRTCCloudDef.TRTC_VIDEO_MIRROR_TYPE_ENABLE
+                mTRTCCloud.setRemoteRenderParams(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG, params)
                 mTRTCCloud.startRemoteView(userId, TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_BIG, remoteView)
                 findViewById<View>(R.id.progress).visibility = View.GONE
             } else {
